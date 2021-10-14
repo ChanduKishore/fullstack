@@ -1,10 +1,8 @@
 
 
-import {useState} from 'react';
+import {useState,useEffect} from 'react';
+import axios from 'axios';
 
-
-const Names=[{id:1,name:'Chandu kishore',number:458945424},
-            {id:2,name:'Mahesh',number:8744458424}];
 
 function Filter({value,onChange}){
   return <input type='text' value={value} onChange={onChange} placeholder='Filter' />
@@ -36,25 +34,26 @@ function Display({title,contacts}){
   return(<>
           <h2>{title}</h2>
             <ul>
-           {contacts.map((person)=> <Person key={person.id} person={person} />)}
+           {contacts.map((person)=> <Person 
+                                          key={person.id}
+                                            person={person} 
+                                            />)}
           </ul>
           </>);
 }
 
 export default function App() {
-
-  const [contacts, setContacts]=useState(Names);
+  const jsonServer='http://localhost:3001/contacts';
+  const [contacts, setContacts]=useState([]);
   const [newName, setNewName]=useState('');
   const [newNumber, setNewNumber]=useState('');
   const [filtered, setFilter]=useState('');
   const filteredContacts = (!filtered)?
                              contacts:
                              contacts.filter(contact=>
-                                              contact.name.slice(0,filtered.length).indexOf(filtered)!==-1);
+                             contact.name.slice(0,filtered.length).indexOf(filtered)!==-1);
+  
 
-  function handleFilterChange(e){
-    setFilter(e.target.value)
-  }
   function addName(e){
     e.preventDefault();
 
@@ -65,17 +64,23 @@ export default function App() {
                           id:contacts.length+1,
                           name:newName,
                           number:newNumber}     
-
+            axios.post(jsonServer, nameObj)
             setContacts(contacts.concat(nameObj));
             setNewName('');
             setNewNumber('')}
 
   }
 
+  useEffect(()=>{
+    axios
+    .get(jsonServer)
+    .then(response=>setContacts(response.data))
+  },[])
+  
   return(
           <>
           <h2>Phonebook</h2>
-          <Filter onChange={handleFilterChange} value={filtered} />
+          <Filter onChange={(e)=>setFilter(e.target.value)} value={filtered} />
 
           <PersonForm 
             title='Add new contact'
