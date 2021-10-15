@@ -7,7 +7,9 @@ function getAll(){
     return request.then(response=>response.data)
 }
 function create(newObject){
-    return axios.post(jsonServer,newObject)
+    const request= axios.post(jsonServer,newObject)
+    return request.then(response=>response.data)
+
     
 
 }
