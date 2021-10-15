@@ -1,8 +1,8 @@
 
 
 import {useState,useEffect} from 'react';
-import axios from 'axios';
-
+import contactServices from './services/contacts'
+import uuid from 'react-uuid'
 
 function Filter({value,onChange}){
   return <input type='text' value={value} onChange={onChange} placeholder='Filter' />
@@ -27,23 +27,34 @@ function PersonForm({title,onSubmit, handleInputChange,values}){
           </form>);
 
 }
-function Person({person}){
-  return <li>{person.name} {person.number}</li>
+function Person({person,handleDelete}){
+
+  return (
+  <div>{person.name} {person.number} <button
+                                      onClick={()=>handleDelete(person.id,person.name)}>
+                                        delete</button>
+  </div>)
 }
-function Display({title,contacts}){
+function Display({title,contacts,setContacts}){
+  function handleDelete(id,name){
+    if(window.confirm(`Delete ${name}`)){
+          contactServices.remove(id)
+          const updatedContacts=contacts.filter(contact=> contact.id!==id)
+          setContacts(updatedContacts)
+          }
+    }
   return(<>
           <h2>{title}</h2>
-            <ul>
            {contacts.map((person)=> <Person 
                                           key={person.id}
-                                            person={person} 
+                                            person={person}
+                                            handleDelete={handleDelete} 
                                             />)}
-          </ul>
           </>);
 }
 
 export default function App() {
-  const jsonServer='http://localhost:3001/contacts';
+  
   const [contacts, setContacts]=useState([]);
   const [newName, setNewName]=useState('');
   const [newNumber, setNewNumber]=useState('');
@@ -51,30 +62,39 @@ export default function App() {
   const filteredContacts = (!filtered)?
                              contacts:
                              contacts.filter(contact=>
-                             contact.name.slice(0,filtered.length).indexOf(filtered)!==-1);
+                             contact.name.indexOf(filtered)!==-1);
   
 
-  function addName(e){
+  function addContact(e){
     e.preventDefault();
+    const contactAlreadyExists=contacts.find(person=>person.name===newName)
+    if(contactAlreadyExists){
 
-    if(contacts.find((person)=>person.name===newName)){
-      alert(`${newName} already added to phonebook`)
+      if(window.confirm(`${newName} already added to phonebook, replace the old number with new one`)){
+
+         const updatedContact={...contactAlreadyExists, number:newNumber}
+        contactServices.update(contactAlreadyExists.id,updatedContact)
+        const updatedContactList=contacts.map(contact=> (contact.id!==contactAlreadyExists.id)?contact:updatedContact)
+        setContacts(updatedContactList)
+        setNewName('')
+        setNewNumber('')
+       }
       }else{
-            const nameObj={
-                          id:contacts.length+1,
+            const newObj={
+                          id:uuid(),
                           name:newName,
                           number:newNumber}     
-            axios.post(jsonServer, nameObj)
-            setContacts(contacts.concat(nameObj));
-            setNewName('');
+            contactServices.create(newObj)
+            setContacts(contacts.concat(newObj))
+            setNewName('')
             setNewNumber('')}
 
   }
 
   useEffect(()=>{
-    axios
-    .get(jsonServer)
-    .then(response=>setContacts(response.data))
+    contactServices
+    .getAll()
+    .then(contactList=>setContacts(contactList))
   },[])
   
   return(
@@ -84,12 +104,12 @@ export default function App() {
 
           <PersonForm 
             title='Add new contact'
-            onSubmit={addName}
+            onSubmit={addContact}
             handleInputChange={{name:(e)=>setNewName(e.target.value),
                                 number:(e)=>setNewNumber(e.target.value)}}
             values={{name:newName,number:newNumber}}/>
 
-          <Display title='Numbers' contacts={filteredContacts}/>
+          <Display title='Numbers' contacts={filteredContacts} setContacts={setContacts}/>
           </>);  
   
 }
