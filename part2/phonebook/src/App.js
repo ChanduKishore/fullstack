@@ -83,6 +83,7 @@ export default function App() {
     .then(contactList=>setContacts(contactList))
   },[])
   
+  console.log(contacts)
   return(
           <>
            <Notification 
